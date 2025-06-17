@@ -1,0 +1,14 @@
+{
+  "name": "pagination",
+  "version": "1.0.0",
+  "main": "offset-based-pagination.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon offset-based-pagination.js"
+
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
