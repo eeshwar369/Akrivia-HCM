@@ -1,0 +1,98 @@
+// app.js
+const express = require('express');
+const mysql = require('mysql2/promise');
+const cors = require('cors'); // needed if frontend is separate
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: 'your_password',
+  database: 'your_database',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+app.get('/feed', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const cursor = parseInt(req.query.cursor) || 0;
+
+    let query, params;
+
+    if (cursor > 0) {
+      query = 'SELECT * FROM posts WHERE id > ? ORDER BY id ASC LIMIT ?';
+      params = [cursor, limit];
+    } else {
+      query = 'SELECT * FROM posts ORDER BY id ASC LIMIT ?';
+      params = [limit];
+    }
+
+    const [posts] = await pool.query(query, params);
+
+    const nextCursor = posts.length > 0 ? posts[posts.length - 1].id : null;
+
+    res.json({
+      nextCursor,
+      hasMore: posts.length === limit,
+      posts
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Infinite Scroll API running at http://localhost:${PORT}`);
+});
+
+
+// FrontEnd Code for Reference
+
+// <!DOCTYPE html>
+// <html>
+// <head><title>Infinite Scroll Feed</title></head>
+// <body>
+//   <div id="feed"></div>
+//   <script>
+//     let cursor = 0;
+//     let loading = false;
+
+//     async function loadPosts() {
+//       if (loading) return;
+//       loading = true;
+
+//       const res = await fetch(`http://localhost:3000/feed?limit=5&cursor=${cursor}`);
+//       const data = await res.json();
+
+//       data.posts.forEach(post => {
+//         const div = document.createElement('div');
+//         div.textContent = `#${post.id} - ${post.title}`;
+//         document.getElementById('feed').appendChild(div);
+//       });
+
+//       if (data.nextCursor) {
+//         cursor = data.nextCursor;
+//         loading = false;
+//       }
+//     }
+
+//     window.addEventListener('scroll', () => {
+//       if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 50) {
+//         loadPosts();
+//       }
+//     });
+
+//     // Initial load
+//     loadPosts();
+//   </script>
+// </body>
+// </html>
+
